@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Steady Launch Radar — pre-token protocols ranked by implied value</title>
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<header class="top">
+  <div>
+    <h1>Steady Launch Radar</h1>
+    <p class="sub">Which pre-token protocol is worth farming next, and what do I do about it? {{BOARD_N}} protocols ranked by implied token value, priced off {{COMPS_N}} traded-token comparables. Snapshot {{AS_OF}}.</p>
+  </div>
+  <div class="kpis">
+    <div class="kpi"><span class="kpi-n">{{BOARD_N}}</span><span class="kpi-l">ranked protocols</span></div>
+    <div class="kpi"><span class="kpi-n">{{TOTAL_IMPLIED}}</span><span class="kpi-l">total implied value</span></div>
+    <div class="kpi"><span class="kpi-n">{{FARM_N}}</span><span class="kpi-l">FARM verdicts</span></div>
+    <div class="kpi"><span class="kpi-n">{{THIN_N}} thin · {{SKIP_N}} skip</span><span class="kpi-l">the rest of the board</span></div>
+  </div>
+</header>
+
+<section class="panel" id="validation">
+  <h2>Model validation — the numbers, not a claim</h2>
+  <p class="formula">{{FIT_FORMULA}}</p>
+  <p>Fitted by OLS on {{COMPS_N}} traded-token comparables (protocols whose token already trades, market cap above zero). The implied value of a pre-token protocol is the fitted value, with the implied-to-TVL ratio clamped to 0.5%–75%. Every number below is recomputed from the snapshot on every run.</p>
+  <div class="stats">
+    <div class="stat"><b>{{WF_R2}}</b><span>walk-forward R², model (train oldest 60%, test newest 40%)</span></div>
+    <div class="stat"><b>{{WF_FLAT}}</b><span>walk-forward R², flat-median baseline (same split)</span></div>
+    <div class="stat"><b>{{LOO_RMSE}}</b><span>leave-one-out RMSE, log units (model)</span></div>
+    <div class="stat"><b>{{LOO_FLAT}}</b><span>leave-one-out RMSE, flat-median baseline</span></div>
+    <div class="stat"><b>{{INSAMPLE_R2}}</b><span>in-sample R² of the fit</span></div>
+    <div class="stat"><b>200 refits</b><span>seeded bootstrap refits give every row its value interval and rank range</span></div>
+  </div>
+  <p class="note">The model beats the flat baseline out of sample on both tests. Growth stays in the model because the blind test keeps it; age, chain count and category are dropped because the blind test rejects them — see the term table below.</p>
+  <canvas id="scatter" width="860" height="200" role="img" aria-label="Scatter plot of traded comparables: log market cap against log TVL, with the fitted curve"></canvas>
+  <p class="muted">Each dot is one traded-token comparable (log market cap vs log TVL). The orange line is the fitted curve at zero growth. Board rows are priced from this curve, not from a hardcoded list.</p>
+</section>
+
+<section class="panel hero">
+  <h2>Top of the board</h2>
+  <p><b>{{TOP1_NAME}}</b> — implied value <b>{{TOP1_VALUE}}</b>, expected value <b>{{TOP1_EV}}</b> on the sized deposit, about <b>{{TOP1_DPH}}</b> of work. Click any row below for its full farm plan.</p>
+</section>
+
+<section class="panel" id="top10">
+  <h2>Top 10 by implied value</h2>
+  <table class="board static">
+    <thead><tr><th>#</th><th>Protocol</th><th class="num">Implied value</th><th class="num">Expected value</th><th class="num">Break-even deposit</th><th class="num">$/hour</th><th>Verdict</th></tr></thead>
+    <tbody>
+{{TOP10_ROWS}}
+    </tbody>
+  </table>
+</section>
+
+<section class="panel" id="board-panel">
+  <h2>Full board — {{BOARD_N}} protocols</h2>
+  <div class="controls">
+    <input id="search" type="search" placeholder="Search protocol or category…" aria-label="Search protocols">
+    <div class="filters" role="group" aria-label="Filter by verdict">
+      <button data-verdict="ALL" class="active">All</button>
+      <button data-verdict="FARM">FARM</button>
+      <button data-verdict="THIN">THIN</button>
+      <button data-verdict="SKIP">SKIP</button>
+    </div>
+    <label class="watch"><input type="checkbox" id="watch-only"> Watchlist only (40)</label>
+  </div>
+  <div class="table-wrap">
+  <table class="board" id="board">
+    <thead><tr>
+      <th data-sort="rank">#</th>
+      <th data-sort="name">Protocol</th>
+      <th data-sort="tvl_usd" class="num">TVL</th>
+      <th data-sort="change_7d" class="num">7D</th>
+      <th data-sort="age_days" class="num">Age</th>
+      <th data-sort="implied_value_usd" class="num">Implied value</th>
+      <th class="num">Interval (P10–P90)</th>
+      <th class="num">Rank range</th>
+      <th data-sort="expected_value_usd" class="num">Expected value</th>
+      <th data-sort="break_even_deposit_usd" class="num">Break-even</th>
+      <th data-sort="dollars_per_hour" class="num">$/hour</th>
+      <th data-sort="verdict">Verdict</th>
+    </tr></thead>
+    <tbody id="board-body"></tbody>
+  </table>
+  </div>
+  <p class="count" id="count"></p>
+</section>
+
+<section class="panel" id="detail" hidden>
+  <h2 id="detail-title">Protocol detail</h2>
+  <div id="detail-body"></div>
+</section>
+
+<section class="panel" id="model">
+  <h2>How the value is computed</h2>
+  <p class="formula">{{FIT_FORMULA}}</p>
+  <ol class="steps">
+    <li><b>Comparables.</b> Every protocol in the snapshot whose token trades and whose market cap is above zero ({{COMPS_N}} of them) anchors the fit. Protocols whose token already trades never appear on the board.</li>
+    <li><b>Fit.</b> Ordinary least squares of log market cap on a constant, log TVL and 7-day TVL growth (as a fraction). No hardcoded list of names: a protocol's value follows from its own TVL and growth.</li>
+    <li><b>Implied value.</b> The fitted value for the protocol, with the implied-to-TVL ratio clamped to 0.5%–75% so no row is priced at a multiple the comparables never support.</li>
+    <li><b>Uncertainty.</b> 200 seeded bootstrap refits of the fit. Each row shows its P10–P90 value interval and the rank range across refits.</li>
+    <li><b>Farm economics.</b> Deposit is sized by TVL tier ($500 below $25M, $1,000 below $100M, $2,000 below $500M, $5,000 above). Expected value is implied value times deposit over TVL. Costs are $30 to set up plus $5 to exit. Break-even is the deposit at which expected value equals cost. $/hour divides the net by the hours the plan takes (half an hour to set up, fifteen minutes to exit, ten minutes of checking per week).</li>
+    <li><b>Verdict.</b> FARM when the expected value reaches $170, THIN when it reaches $85, SKIP below that. A thin or skip row still shows its plan, with the warning in the steps.</li>
+  </ol>
+  <h3>Term table — kept only if the blind test keeps it</h3>
+  <table class="board">
+    <thead><tr><th>Term</th><th>Decision</th><th class="num">Walk-forward R²</th><th>Why</th></tr></thead>
+    <tbody>
+{{TERM_ROWS}}
+    </tbody>
+  </table>
+  <h3>Category calibration (diagnostic — category is NOT in the model)</h3>
+  <p>Median market-cap-to-TVL ratio among the comparables in each category, shown so a reader can see what the categories look like. The model does not use it: the blind test found no gain from a category term.</p>
+  <table class="board">
+    <thead><tr><th>Category</th><th class="num">Comparables</th><th class="num">Median mcap/TVL</th><th class="num">Board rows</th></tr></thead>
+    <tbody>
+{{CAT_ROWS}}
+    </tbody>
+  </table>
+  <h3>Limits, stated plainly</h3>
+  <p class="note">The snapshot is a single day ({{AS_OF}}). A protocol can launch a token, change its TVL sharply, or turn out to have a token its DefiLlama record does not carry — the board says a protocol <i>records</i> no token, never that it has none. Implied value is this entry's claim about what a token would be worth if the protocol's record stayed as it is; it is not a prediction that a token will be issued, or when. Farm plans are sized for one reader doing the work by hand; they are not financial advice.</p>
+</section>
+
+<footer>
+  <p>Steady Launch Radar · snapshot {{AS_OF}} · {{BOARD_N}} pre-token protocols · fitted curve + validation panel · all figures recomputed at run time from the sealed snapshot.</p>
+</footer>
+<script src="../data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
