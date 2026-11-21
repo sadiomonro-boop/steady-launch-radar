@@ -302,6 +302,18 @@ function categoryAction(p: SnapshotProtocol): string {
   return "complete one real transaction the protocol counts, then repeat it once a week";
 }
 
+// Step 3 of the farm plan varies per protocol: it names the protocol and
+// its chain, and rotates among four sentence frames picked by a small
+// hash of the slug, so the run stays byte-identical. Step 3 is prose
+// only — ranks, values, EV, break-even and $/hour are never touched here.
+const STEP3_FRAMES = 4;
+
+function step3Frame(p: SnapshotProtocol): number {
+  let h = 0;
+  for (let i = 0; i < p.slug.length; i++) h = (h * 31 + p.slug.charCodeAt(i)) >>> 0;
+  return h % STEP3_FRAMES;
+}
+
 function farmSteps(
   p: SnapshotProtocol,
   implied: number,
@@ -342,6 +354,40 @@ function farmSteps(
           " per hour of work, so the sized deposit stays at " +
           fmtUsd(deposit) +
           " and no top-up unless the implied value rises.";
+  const action = categoryAction(p);
+  const frame = step3Frame(p);
+  const step3 =
+    frame === 0
+      ? "Each week, " +
+        action +
+        " on " +
+        chain +
+        " for " +
+        p.name +
+        ", then record the transaction hash, the date and the position size in a simple log."
+      : frame === 1
+        ? "Once a week, " +
+          action +
+          " on " +
+          chain +
+          " to keep the " +
+          p.name +
+          " position active, and log the transaction hash, the date and the position size."
+        : frame === 2
+          ? "Every week, " +
+            action +
+            " through " +
+            p.name +
+            " on " +
+            chain +
+            "; write down the transaction hash, the date and the position size in a simple log."
+          : "Keep the " +
+            p.name +
+            " position live with one weekly action on " +
+            chain +
+            ": " +
+            action +
+            ". Record the transaction hash, the date and the position size each time.";
   return [
     "Set up a fresh wallet for " +
       p.name +
@@ -365,9 +411,7 @@ function farmSteps(
       ", " +
       fmtMoney(p.tvl_usd) +
       " TVL). This is the sized ticket for this protocol, not a maximum.",
-    "Each week, " +
-      categoryAction(p) +
-      " and record the transaction hash, the date and the position size in a simple log.",
+    step3,
     "Check the position every Sunday: exit the plan early if TVL falls 30% below " +
       fmtMoney(p.tvl_usd) +
       " (about " +

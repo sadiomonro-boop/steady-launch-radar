@@ -135,6 +135,16 @@ body.shot-board #top10,
 body.shot-board #detail,
 body.shot-board #model,
 body.shot-board footer { display: none; }
+/* board-top: validation panel stays, but the scatter (and its caption)
+   go, so the full board's first rows fit in the first 900 px. */
+body.shot-board-top .hero,
+body.shot-board-top #top10,
+body.shot-board-top #detail,
+body.shot-board-top #model,
+body.shot-board-top footer,
+body.shot-board-top #scatter,
+body.shot-board-top #validation p.muted,
+body.shot-board-top #validation p.note { display: none; }
 @media (max-width: 700px) {
   .top, section.panel { margin-left: 12px; margin-right: 12px; padding-left: 14px; padding-right: 14px; }
   .detail-grid { grid-template-columns: 1fr; }

@@ -231,10 +231,13 @@
   }
 
   document.addEventListener("DOMContentLoaded", function () {
-    // Screenshot modes (?shot=detail / ?shot=board): show one view at the
-    // top of the page, still rendered by this same dashboard code.
+    // Screenshot modes (?shot=detail / ?shot=board / ?shot=board-top): show
+    // one view at the top of the page, still rendered by this same
+    // dashboard code. board-top keeps the validation panel and pulls the
+    // board rows into the first 900 px, so the first screenshot shows the
+    // board itself, not just the panel above it.
     var shot = new URLSearchParams(window.location.search).get("shot");
-    if (shot === "detail" || shot === "board") document.body.classList.add("shot-" + shot);
+    if (shot === "detail" || shot === "board" || shot === "board-top") document.body.classList.add("shot-" + shot);
     var search = $("search");
     if (search) {
       search.addEventListener("input", function () {
